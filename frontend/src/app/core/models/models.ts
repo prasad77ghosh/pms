@@ -84,6 +84,7 @@ export interface ProductListResponse {
 export interface CategoryListResponse {
     page: number;
     limit: number;
+    total: number;
     data: Category[];
 }
 

@@ -5,6 +5,33 @@ import { AuthRequest } from "../types/auth";
 
 export class UserController {
     /**
+     * Create a new user
+     * POST /api/v1/user/add
+     */
+    async create(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            fieldValidateError(req);
+
+            const { name, email, password, role } = req.body;
+
+            const user = await UserService.createUser({
+                name,
+                email,
+                password,
+                role,
+            });
+
+            res.status(201).json({
+                success: true,
+                msg: "User created successfully",
+                data: user,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    /**
      * Get a single user by ID
      * GET /api/v1/user/:id
      */

@@ -65,9 +65,21 @@ export class CategoryService {
 
     const result = await db.query(finalQuery, params);
 
+    // Count query
+    const countQuery = `
+      SELECT COUNT(*) AS total
+      FROM categories
+      WHERE 1=1${search ? ` AND to_tsvector('simple', name) @@ plainto_tsquery('simple', $1)` : ''}
+    `;
+
+    const countParams = search ? [search] : [];
+    const countResult = await db.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].total, 10);
+
     return {
       page,
       limit,
+      total,
       data: result.rows,
     };
   }

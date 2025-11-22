@@ -1,6 +1,8 @@
 <div class="max-w-3xl mx-auto">
   <div class="flex items-center justify-between mb-6">
-    <h2 class="text-2xl font-bold text-gray-800">{{ isEditMode ? 'Edit Product' : 'Create Product' }}</h2>
+    <h2 class="text-2xl font-bold text-gray-800">
+      {{ isEditMode ? 'Edit Product' : 'Create Product' }}
+    </h2>
     <a routerLink="/products" class="text-gray-600 hover:text-gray-900">Back to List</a>
   </div>
 
@@ -12,91 +14,106 @@
         <label class="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
         <div class="flex items-center space-x-6">
           <div class="shrink-0">
-            <img [src]="imagePreview() || 'assets/placeholder.png'" class="h-32 w-32 object-cover rounded-lg border border-gray-200" alt="Product preview">
+            <img
+              [src]="imagePreview() || 'assets/placeholder.png'"
+              class="h-32 w-32 object-cover rounded-lg border border-gray-200"
+              alt="Product preview"
+            />
           </div>
+
           <label class="block">
-            <span class="sr-only">Choose profile photo</span>
-            <input type="file" (change)="onFileSelected($event)" accept="image/*" 
-                   class="block w-full text-sm text-slate-500
-                     file:mr-4 file:py-2 file:px-4
-                     file:rounded-full file:border-0
-                     file:text-sm file:font-semibold
-                     file:bg-blue-50 file:text-blue-700
-                     hover:file:bg-blue-100
-                   "/>
+            <span class="sr-only">Choose product photo</span>
+            <input
+              type="file"
+              (change)="onFileSelected($event)"
+              accept="image/*"
+              class="block w-full text-sm text-slate-500 file:mr-4 
+                     file:py-2 file:px-4 file:rounded-full file:border-0 
+                     file:text-sm file:font-semibold file:bg-blue-50 
+                     file:text-blue-700 hover:file:bg-blue-100"
+            />
           </label>
         </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
         <!-- Name -->
         <div>
-          <label for="name" class="block text-sm font-medium text-gray-700">Product Name</label>
-          <input type="text" id="name" formControlName="name" 
-                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2">
-          <div *ngIf="productForm.get('name')?.invalid && productForm.get('name')?.touched" class="text-red-500 text-xs mt-1">
+          <label class="block text-sm font-medium text-gray-700">Product Name</label>
+          <input
+            type="text"
+            formControlName="name"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm 
+                   focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"
+          />
+          <div *ngIf="productForm.get('name')?.invalid && productForm.get('name')?.touched"
+               class="text-red-500 text-xs mt-1">
             Name is required.
           </div>
         </div>
 
         <!-- Category -->
         <div>
-          <label for="categoryId" class="block text-sm font-medium text-gray-700">Category</label>
-          <select id="categoryId" formControlName="categoryId" 
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2">
+          <label class="block text-sm font-medium text-gray-700">Category</label>
+          <select
+            formControlName="category_id"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm 
+                   focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"
+          >
             <option value="">Select a category</option>
-            <option *ngFor="let cat of categories()" [value]="cat.id">{{ cat.name }}</option>
+            <option *ngFor="let cat of categories()" [value]="cat.id">
+              {{ cat.name }}
+            </option>
           </select>
-          <div *ngIf="productForm.get('categoryId')?.invalid && productForm.get('categoryId')?.touched" class="text-red-500 text-xs mt-1">
+          <div *ngIf="productForm.get('category_id')?.invalid && productForm.get('category_id')?.touched"
+               class="text-red-500 text-xs mt-1">
             Category is required.
           </div>
         </div>
 
         <!-- Price -->
-        <div>
-          <label for="price" class="block text-sm font-medium text-gray-700">Price</label>
-          <div class="relative mt-1 rounded-md shadow-sm">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <span class="text-gray-500 sm:text-sm">$</span>
-            </div>
-            <input type="number" id="price" formControlName="price" 
-                   class="block w-full rounded-md border-gray-300 pl-7 pr-12 focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2" placeholder="0.00">
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700">Price</label>
+          <div class="relative mt-1">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3">$</span>
+            <input
+              type="number"
+              formControlName="price"
+              class="block w-full rounded-md border-gray-300 pl-7 pr-12 
+                     focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"
+              placeholder="0.00"
+            />
           </div>
-          <div *ngIf="productForm.get('price')?.invalid && productForm.get('price')?.touched" class="text-red-500 text-xs mt-1">
+          <div *ngIf="productForm.get('price')?.invalid && productForm.get('price')?.touched"
+               class="text-red-500 text-xs mt-1">
             Valid price is required.
           </div>
         </div>
 
-        <!-- Stock -->
-        <div>
-          <label for="stock" class="block text-sm font-medium text-gray-700">Stock</label>
-          <input type="number" id="stock" formControlName="stock" 
-                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2">
-          <div *ngIf="productForm.get('stock')?.invalid && productForm.get('stock')?.touched" class="text-red-500 text-xs mt-1">
-            Stock is required.
-          </div>
-        </div>
-      </div>
-
-      <!-- Description -->
-      <div>
-        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-        <textarea id="description" formControlName="description" rows="3" 
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"></textarea>
-        <div *ngIf="productForm.get('description')?.invalid && productForm.get('description')?.touched" class="text-red-500 text-xs mt-1">
-          Description is required.
-        </div>
       </div>
 
       <div class="flex justify-end pt-4 border-t">
-        <button type="button" routerLink="/products" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mr-3">
+        <button
+          type="button"
+          routerLink="/products"
+          class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm 
+                 text-sm font-medium text-gray-700 hover:bg-gray-50 mr-3"
+        >
           Cancel
         </button>
-        <button type="submit" [disabled]="productForm.invalid || isSubmitting"
-                class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+
+        <button
+          type="submit"
+          [disabled]="productForm.invalid || isSubmitting"
+          class="inline-flex justify-center py-2 px-4 rounded-md text-white 
+                 bg-blue-600 hover:bg-blue-700 shadow-sm text-sm font-medium 
+                 disabled:opacity-50"
+        >
           {{ isSubmitting ? 'Saving...' : 'Save Product' }}
         </button>
       </div>
+
     </form>
   </div>
 </div>

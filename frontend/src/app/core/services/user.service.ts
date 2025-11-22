@@ -4,6 +4,13 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse, User } from '../models/models';
 
+export interface CreateUserRequest {
+    name: string;
+    email: string;
+    password: string;
+    role: 'admin' | 'user';
+}
+
 export interface UpdateUserRequest {
     name?: string;
     email?: string;
@@ -20,6 +27,7 @@ export interface UserListParams {
 export interface UserListResponse {
     page: number;
     limit: number;
+    total: number;
     data: User[];
 }
 
@@ -30,6 +38,19 @@ export class UserService {
     private apiUrl = `${environment.apiUrl}/user`;
 
     constructor(private http: HttpClient) { }
+
+    /**
+     * Create a new user
+     * POST /api/v1/user/add
+     */
+    createUser(data: CreateUserRequest): Observable<ApiResponse<User>> {
+        return this.http.post<ApiResponse<User>>(`${this.apiUrl}/add`, data).pipe(
+            catchError(error => {
+                console.error('Create user error:', error);
+                return throwError(() => error);
+            })
+        );
+    }
 
     /**
      * Get a single user by ID

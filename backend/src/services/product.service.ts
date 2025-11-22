@@ -147,6 +147,72 @@ export class ProductService {
     };
   }
 
+  static async updateProduct(id: string, updates: UpdateProductData) {
+    const { name, price, image_url, category_id } = updates;
+
+    // Check if product exists
+    const productCheck = await db.query(`SELECT id FROM products WHERE id = $1`, [
+      id,
+    ]);
+
+    if (productCheck.rows.length === 0) {
+      throw new NotFound("Product not found");
+    }
+
+    // Build dynamic update query
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (name !== undefined) {
+      fields.push(`name = $${paramIndex}`);
+      values.push(name);
+      paramIndex++;
+    }
+
+    if (price !== undefined) {
+      fields.push(`price = $${paramIndex}`);
+      values.push(price);
+      paramIndex++;
+    }
+
+    if (image_url !== undefined) {
+      fields.push(`image_url = $${paramIndex}`);
+      values.push(image_url);
+      paramIndex++;
+    }
+
+    if (category_id !== undefined) {
+      // Verify category exists if being updated
+      const categoryCheck = await db.query(
+        `SELECT id FROM categories WHERE id = $1`,
+        [category_id]
+      );
+      if (categoryCheck.rows.length === 0) {
+        throw new NotFound("Category not found");
+      }
+
+      fields.push(`category_id = $${paramIndex}`);
+      values.push(category_id);
+      paramIndex++;
+    }
+
+    if (fields.length === 0) {
+      return productCheck.rows[0]; // No updates
+    }
+
+    values.push(id);
+    const query = `
+      UPDATE products 
+      SET ${fields.join(", ")} 
+      WHERE id = $${paramIndex}
+      RETURNING *;
+    `;
+
+    const result = await db.query(query, values);
+    return result.rows[0];
+  }
+
   static async deleteProduct(productId: string) {
     const result = await db.query(
       `DELETE FROM products WHERE id = $1 RETURNING id`,

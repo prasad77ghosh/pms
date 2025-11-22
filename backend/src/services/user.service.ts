@@ -1,5 +1,6 @@
 import { NotFound, Conflict } from "http-errors";
 import { db } from "../db/databse";
+import { EncryptAndDecryptService } from "../utils/encrtiption.service";
 
 interface UpdateUserData {
     name?: string;
@@ -7,7 +8,39 @@ interface UpdateUserData {
     role?: "admin" | "user";
 }
 
+interface CreateUserData {
+    name: string;
+    email: string;
+    password: string;
+    role: "admin" | "user";
+}
+
 export class UserService {
+    /**
+     * Create a new user
+     */
+    static async createUser(data: CreateUserData) {
+        const { name, email, password, role } = data;
+
+        const userExistQuery = `SELECT id FROM users WHERE email = $1 LIMIT 1`;
+        const existingUser = await db.query(userExistQuery, [email]);
+
+        if (existingUser.rows.length > 0) {
+            throw new Conflict("A user already exists with this email");
+        }
+
+        const encryptedPassword = await new EncryptAndDecryptService().hashPassword(password);
+
+        const insertQuery = `
+            INSERT INTO users (name, email, password, role)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, name, email, role, created_at;
+        `;
+
+        const result = await db.query(insertQuery, [name, email, encryptedPassword, role]);
+        return result.rows[0];
+    }
+
     /**
      * Get a single user by ID
      */
@@ -77,9 +110,38 @@ export class UserService {
 
         const result = await db.query(finalQuery, params);
 
+        // Count query
+        let countQuery = `
+          SELECT COUNT(*) AS total
+          FROM users
+          WHERE 1=1
+        `;
+        const countParams: any[] = [];
+        let countIndex = 1;
+
+        if (search) {
+            countQuery += ` AND (
+                to_tsvector('simple', name) @@ plainto_tsquery('simple', $${countIndex})
+                OR email ILIKE $${countIndex + 1}
+            )`;
+            countParams.push(search);
+            countParams.push(`%${search}%`);
+            countIndex += 2;
+        }
+
+        if (role) {
+            countQuery += ` AND role = $${countIndex}`;
+            countParams.push(role);
+            countIndex++;
+        }
+
+        const countResult = await db.query(countQuery, countParams);
+        const total = parseInt(countResult.rows[0].total, 10);
+
         return {
             page,
             limit,
+            total,
             data: result.rows,
         };
     }

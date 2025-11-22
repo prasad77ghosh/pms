@@ -22,6 +22,7 @@ export class UserFormComponent implements OnInit {
   userForm = this.fb.group({
     name: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
+    password: [''], // Validation handled dynamically
     role: ['user' as 'admin' | 'user', Validators.required]
   });
 
@@ -55,17 +56,25 @@ export class UserFormComponent implements OnInit {
   }
 
   onSubmit() {
+    // Add password validation if in create mode
+    if (!this.isEditMode) {
+      this.userForm.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
+    } else {
+      this.userForm.get('password')?.clearValidators();
+    }
+    this.userForm.get('password')?.updateValueAndValidity();
+
     if (this.userForm.valid) {
       this.isSubmitting = true;
       const formData = this.userForm.value;
 
-      const userData = {
-        name: formData.name!,
-        email: formData.email!,
-        role: formData.role!
-      };
-
       if (this.isEditMode && this.id) {
+        const userData = {
+          name: formData.name!,
+          email: formData.email!,
+          role: formData.role!
+        };
+
         // Update existing user
         this.userService.updateUser(this.id, userData).subscribe({
           next: (response) => {
@@ -82,10 +91,28 @@ export class UserFormComponent implements OnInit {
           }
         });
       } else {
-        // Note: User creation is handled by auth/register endpoint
-        this.toast.show('Please use the registration page to create new users', 'info');
-        this.router.navigate(['/auth/register']);
-        this.isSubmitting = false;
+        const userData = {
+          name: formData.name!,
+          email: formData.email!,
+          password: formData.password!,
+          role: formData.role!
+        };
+
+        // Create new user
+        this.userService.createUser(userData).subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.toast.show('User created successfully', 'success');
+              this.router.navigate(['/users']);
+            }
+            this.isSubmitting = false;
+          },
+          error: (error) => {
+            console.error('Error creating user:', error);
+            this.toast.show('Failed to create user', 'error');
+            this.isSubmitting = false;
+          }
+        });
       }
     } else {
       this.userForm.markAllAsTouched();

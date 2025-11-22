@@ -15,6 +15,14 @@ export default class UserRoutes {
     }
 
     private routes() {
+        // Create user (protected)
+        this.router.post(
+            "/add",
+            new ProtectedMiddleware().protected,
+            UserValidator.createValidation,
+            this.userController.create
+        );
+
         // List users (protected - admin only recommended)
         this.router.get(
             "/",

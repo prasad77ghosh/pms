@@ -1,10 +1,19 @@
-import { Component, inject, Input, Output, EventEmitter, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  inject,
+  Input,
+  OnInit,
+  signal
+} from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+
 import { ProductService } from '../../../core/services/product.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+
 import { Category } from '../../../core/models/models';
 
 @Component({
@@ -14,7 +23,7 @@ import { Category } from '../../../core/models/models';
   templateUrl: './product-form.component.html'
 })
 export class ProductFormComponent implements OnInit {
-  @Input() id?: string; // From Router Input Binding
+  @Input() id?: string;
 
   fb = inject(FormBuilder);
   productService = inject(ProductService);
@@ -22,6 +31,7 @@ export class ProductFormComponent implements OnInit {
   router = inject(Router);
   toast = inject(ToastService);
 
+  /** FIXED: must match HTML */
   productForm = this.fb.group({
     name: ['', Validators.required],
     price: [0, [Validators.required, Validators.min(0)]],
@@ -31,11 +41,11 @@ export class ProductFormComponent implements OnInit {
 
   isEditMode = false;
   isSubmitting = false;
+
   imagePreview = signal<string | null>(null);
   categories = signal<Category[]>([]);
 
   ngOnInit() {
-    // Load Categories from backend
     this.loadCategories();
 
     if (this.id) {
@@ -51,8 +61,7 @@ export class ProductFormComponent implements OnInit {
           this.categories.set(response.data.data);
         }
       },
-      error: (error) => {
-        console.error('Error loading categories:', error);
+      error: () => {
         this.toast.show('Failed to load categories', 'error');
       }
     });
@@ -62,20 +71,21 @@ export class ProductFormComponent implements OnInit {
     this.productService.getProduct(id).subscribe({
       next: (response) => {
         if (response.success && response.data) {
-          const product = response.data;
+          const p = response.data;
+
           this.productForm.patchValue({
-            name: product.name,
-            price: product.price,
-            category_id: product.category_id?.toString() || '',
-            image_url: product.image_url || ''
+            name: p.name,
+            price: p.price,
+            category_id: p.category_id?.toString() ?? '',
+            image_url: p.image_url ?? ''
           });
-          if (product.image_url) {
-            this.imagePreview.set(product.image_url);
+
+          if (p.image_url) {
+            this.imagePreview.set(p.image_url);
           }
         }
       },
-      error: (error) => {
-        console.error('Error loading product:', error);
+      error: () => {
         this.toast.show('Failed to load product', 'error');
         this.router.navigate(['/products']);
       }
@@ -87,62 +97,60 @@ export class ProductFormComponent implements OnInit {
     if (file) {
       const reader = new FileReader();
       reader.onload = () => {
-        this.imagePreview.set(reader.result as string);
-        // In real app, upload file to server and get URL
-        // For now, just set the data URL
-        this.productForm.patchValue({ image_url: reader.result as string });
+        const url = reader.result as string;
+        this.imagePreview.set(url);
+        this.productForm.patchValue({ image_url: url });
       };
       reader.readAsDataURL(file);
     }
   }
 
   onSubmit() {
-    if (this.productForm.valid) {
-      this.isSubmitting = true;
-      const formData = this.productForm.value;
-
-      const productData = {
-        name: formData.name!,
-        price: formData.price!,
-        category_id: formData.category_id!,
-        image_url: formData.image_url || undefined
-      };
-
-      if (this.isEditMode && this.id) {
-        // Update existing product
-        this.productService.updateProduct(this.id, productData).subscribe({
-          next: (response) => {
-            if (response.success) {
-              this.toast.show('Product updated successfully', 'success');
-              this.router.navigate(['/products']);
-            }
-            this.isSubmitting = false;
-          },
-          error: (error) => {
-            console.error('Error updating product:', error);
-            this.toast.show('Failed to update product', 'error');
-            this.isSubmitting = false;
-          }
-        });
-      } else {
-        // Create new product
-        this.productService.createProduct(productData).subscribe({
-          next: (response) => {
-            if (response.success) {
-              this.toast.show('Product created successfully', 'success');
-              this.router.navigate(['/products']);
-            }
-            this.isSubmitting = false;
-          },
-          error: (error) => {
-            console.error('Error creating product:', error);
-            this.toast.show('Failed to create product', 'error');
-            this.isSubmitting = false;
-          }
-        });
-      }
-    } else {
+    if (this.productForm.invalid) {
       this.productForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSubmitting = true;
+
+    /** FIX — Convert null → undefined so TS matches backend types */
+    const raw = this.productForm.value;
+
+    const data:any = {
+      name: raw.name ?? undefined,
+      price: raw.price ?? undefined,
+      category_id: raw.category_id ?? undefined,
+      image_url: raw.image_url ?? undefined
+    };
+
+    if (this.isEditMode && this.id) {
+      this.productService.updateProduct(this.id, data).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.toast.show('Product updated successfully', 'success');
+            this.router.navigate(['/products']);
+          }
+          this.isSubmitting = false;
+        },
+        error: () => {
+          this.toast.show('Failed to update product', 'error');
+          this.isSubmitting = false;
+        }
+      });
+    } else {
+      this.productService.createProduct(data).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.toast.show('Product created successfully', 'success');
+            this.router.navigate(['/products']);
+          }
+          this.isSubmitting = false;
+        },
+        error: () => {
+          this.toast.show('Failed to create product', 'error');
+          this.isSubmitting = false;
+        }
+      });
     }
   }
 }

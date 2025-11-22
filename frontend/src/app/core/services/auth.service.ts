@@ -1,7 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, throwError, map } from 'rxjs';
+import { Observable, tap, catchError, throwError, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
     ApiResponse,
@@ -117,6 +117,19 @@ export class AuthService {
                 this.router.navigate(['/auth/login']);
                 return throwError(() => error);
             })
+        );
+    }
+
+    checkAuth(): Observable<boolean> {
+        // If we already have a user, we are authenticated
+        if (this.currentUser()) {
+            return of(true);
+        }
+
+        // Otherwise, try to fetch the profile to see if we have a valid session
+        return this.getProfile().pipe(
+            map(() => true),
+            catchError(() => of(false))
         );
     }
 

@@ -28,7 +28,6 @@ export class UserListComponent {
   userToDelete: User | null = null;
 
   columns: TableColumn[] = [
-    { key: 'id', label: 'ID', sortable: true },
     { key: 'name', label: 'Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
     { key: 'role', label: 'Role', sortable: true },
@@ -49,7 +48,7 @@ export class UserListComponent {
       next: (response) => {
         if (response.success && response.data) {
           this.users.set(response.data.data);
-          this.total.set(response.data.data.length);
+          this.total.set(response.data.total);
         }
         this.isLoading.set(false);
       },
