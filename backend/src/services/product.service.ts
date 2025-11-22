@@ -79,25 +79,24 @@ export class ProductService {
   }) {
     const offset = (page - 1) * limit;
 
+    // Base query with filters
     let baseQuery = `
-    SELECT p.id, p.name, p.price, p.image_url, p.created_at,
-           c.name AS category_name
-    FROM products p
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE 1 = 1
-  `;
-
+      SELECT p.id, p.name, p.price, p.image_url, p.created_at,
+             c.name AS category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE 1 = 1
+    `;
     const params: any[] = [];
     let paramIndex = 1;
 
     if (search) {
-      baseQuery += ` 
-      AND (
-        to_tsvector('simple', p.name) @@ plainto_tsquery('simple', $${paramIndex})
-        OR c.name ILIKE $${paramIndex + 1}
-      )
-    `;
-
+      baseQuery += `
+        AND (
+          to_tsvector('simple', p.name) @@ plainto_tsquery('simple', $${paramIndex})
+          OR c.name ILIKE $${paramIndex + 1}
+        )
+      `;
       params.push(search);
       params.push(`%${search}%`);
       paramIndex += 2;
@@ -109,54 +108,43 @@ export class ProductService {
       paramIndex++;
     }
 
+    // Sorting
     let orderBy = "ORDER BY p.price ASC";
     if (sort === "price_desc") orderBy = "ORDER BY p.price DESC";
 
+    // Final paginated query
     const finalQuery = `
-    ${baseQuery}
-    ${orderBy}
-    LIMIT ${limit}
-    OFFSET ${offset}
-  `;
-
+      ${baseQuery}
+      ${orderBy}
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
     const result = await db.query(finalQuery, params);
+
+    // Count query for total items (same filters, no limit/offset)
+    const countQuery = `
+      SELECT COUNT(*) AS total
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE 1 = 1${search ? ` AND (to_tsvector('simple', p.name) @@ plainto_tsquery('simple', $1) OR c.name ILIKE $2)` : ''}${category ? ` AND c.id = $${search ? 3 : 1}` : ''}
+    `;
+    const countParams: any[] = [];
+    if (search) {
+      countParams.push(search);
+      countParams.push(`%${search}%`);
+    }
+    if (category) {
+      countParams.push(category);
+    }
+    const countResult = await db.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].total, 10);
 
     return {
       page,
       limit,
+      total,
       products: result.rows,
     };
-  }
-
-  static async updateProduct(productId: string, data: UpdateProductData) {
-    const fields = [];
-    const values: any[] = [];
-    let index = 1;
-
-    for (const key in data) {
-      fields.push(`${key} = $${index}`);
-      values.push((data as any)[key]);
-      index++;
-    }
-
-    if (fields.length === 0) return;
-
-    const query = `
-      UPDATE products 
-      SET ${fields.join(", ")}
-      WHERE id = $${index}
-      RETURNING id, name, price, image_url, category_id, created_at;
-    `;
-
-    values.push(productId);
-
-    const result = await db.query(query, values);
-
-    if (result.rows.length === 0) {
-      throw new NotFound("Product not found");
-    }
-
-    return result.rows[0];
   }
 
   static async deleteProduct(productId: string) {

@@ -1,8 +1,9 @@
-import { Component, inject, Input, OnInit, signal } from '@angular/core';
+import { Component, inject, Input, Output, EventEmitter, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ApiService } from '../../../core/services/api.service';
+import { ProductService } from '../../../core/services/product.service';
+import { CategoryService } from '../../../core/services/category.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { Category } from '../../../core/models/models';
 
@@ -16,17 +17,16 @@ export class ProductFormComponent implements OnInit {
   @Input() id?: string; // From Router Input Binding
 
   fb = inject(FormBuilder);
-  api = inject(ApiService);
+  productService = inject(ProductService);
+  categoryService = inject(CategoryService);
   router = inject(Router);
   toast = inject(ToastService);
 
   productForm = this.fb.group({
     name: ['', Validators.required],
-    description: ['', Validators.required],
     price: [0, [Validators.required, Validators.min(0)]],
-    categoryId: ['', Validators.required],
-    stock: [0, [Validators.required, Validators.min(0)]],
-    imageUrl: ['']
+    category_id: ['', Validators.required],
+    image_url: ['']
   });
 
   isEditMode = false;
@@ -35,12 +35,8 @@ export class ProductFormComponent implements OnInit {
   categories = signal<Category[]>([]);
 
   ngOnInit() {
-    // Load Categories (Mock)
-    this.categories.set([
-      { id: 1, name: 'Electronics' },
-      { id: 2, name: 'Clothing' },
-      { id: 3, name: 'Books' }
-    ]);
+    // Load Categories from backend
+    this.loadCategories();
 
     if (this.id) {
       this.isEditMode = true;
@@ -48,20 +44,42 @@ export class ProductFormComponent implements OnInit {
     }
   }
 
-  loadProduct(id: string) {
-    // Mock Load
-    // this.api.get<Product>(`products/${id}`).subscribe(...)
-
-    // Mock Data
-    this.productForm.patchValue({
-      name: 'Product ' + id,
-      description: 'Description...',
-      price: 100,
-      categoryId: '1',
-      stock: 50,
-      imageUrl: 'https://via.placeholder.com/150'
+  loadCategories() {
+    this.categoryService.listCategories({ limit: 100 }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.categories.set(response.data.data);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading categories:', error);
+        this.toast.show('Failed to load categories', 'error');
+      }
     });
-    this.imagePreview.set('https://via.placeholder.com/150');
+  }
+
+  loadProduct(id: string) {
+    this.productService.getProduct(id).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          const product = response.data;
+          this.productForm.patchValue({
+            name: product.name,
+            price: product.price,
+            category_id: product.category_id?.toString() || '',
+            image_url: product.image_url || ''
+          });
+          if (product.image_url) {
+            this.imagePreview.set(product.image_url);
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Error loading product:', error);
+        this.toast.show('Failed to load product', 'error');
+        this.router.navigate(['/products']);
+      }
+    });
   }
 
   onFileSelected(event: any) {
@@ -70,7 +88,9 @@ export class ProductFormComponent implements OnInit {
       const reader = new FileReader();
       reader.onload = () => {
         this.imagePreview.set(reader.result as string);
-        // In real app, upload file or set to form
+        // In real app, upload file to server and get URL
+        // For now, just set the data URL
+        this.productForm.patchValue({ image_url: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
@@ -79,11 +99,48 @@ export class ProductFormComponent implements OnInit {
   onSubmit() {
     if (this.productForm.valid) {
       this.isSubmitting = true;
-      // Mock Save
-      setTimeout(() => {
-        this.toast.show(this.isEditMode ? 'Product updated' : 'Product created', 'success');
-        this.router.navigate(['/products']);
-      }, 1000);
+      const formData = this.productForm.value;
+
+      const productData = {
+        name: formData.name!,
+        price: formData.price!,
+        category_id: formData.category_id!,
+        image_url: formData.image_url || undefined
+      };
+
+      if (this.isEditMode && this.id) {
+        // Update existing product
+        this.productService.updateProduct(this.id, productData).subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.toast.show('Product updated successfully', 'success');
+              this.router.navigate(['/products']);
+            }
+            this.isSubmitting = false;
+          },
+          error: (error) => {
+            console.error('Error updating product:', error);
+            this.toast.show('Failed to update product', 'error');
+            this.isSubmitting = false;
+          }
+        });
+      } else {
+        // Create new product
+        this.productService.createProduct(productData).subscribe({
+          next: (response) => {
+            if (response.success) {
+              this.toast.show('Product created successfully', 'success');
+              this.router.navigate(['/products']);
+            }
+            this.isSubmitting = false;
+          },
+          error: (error) => {
+            console.error('Error creating product:', error);
+            this.toast.show('Failed to create product', 'error');
+            this.isSubmitting = false;
+          }
+        });
+      }
     } else {
       this.productForm.markAllAsTouched();
     }

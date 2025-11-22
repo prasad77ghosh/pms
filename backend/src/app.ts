@@ -13,6 +13,7 @@ import BottomMiddleware from "./middlewares/bottom.middleware";
 import AuthRoutes from "./routes/auth.routes";
 import ProductRoutes from "./routes/product.routes";
 import CategoryRoutes from "./routes/category.routes";
+import UserRoutes from "./routes/user.routes";
 import fileUpload from "express-fileupload";
 import BulkUploadRoutes from "./routes/bulk-upload.routes";
 import { getRmqConn } from "./rmq";
@@ -43,10 +44,10 @@ class App {
     // importing instance is enough, connection auto-tests
     console.log("⏳ Initializing PostgreSQL...");
     db;
-    
+
   }
 
-  private async initRmq (){
+  private async initRmq() {
     await getRmqConn();
     await startRmqConsumer();
   }
@@ -55,25 +56,25 @@ class App {
   // BODY PARSERS
   // ---------------------------------------------
   private loadParsers() {
-  this.app.use(express.json({ limit: "2mb" }));                 // JSON limit
-  this.app.use(express.urlencoded({ extended: true, limit: "2mb" })); // Form limit
-  this.app.use(cookieParser());
+    this.app.use(express.json({ limit: "2mb" }));                 // JSON limit
+    this.app.use(express.urlencoded({ extended: true, limit: "2mb" })); // Form limit
+    this.app.use(cookieParser());
 
-  // ===== FILE UPLOAD CONFIG (industry standard) =====
-  this.app.use(
-    fileUpload({
-      limits: {
-        fileSize: 60 * 1024 * 1024, // 20 MB industry standard
-      },
-      abortOnLimit: true,            // Stop upload when limit exceeded
-      createParentPath: true,        // Auto-create upload folders
-      useTempFiles: true,            // Better for large file handling
-      tempFileDir: "/tmp/uploads",   // OS temp folder
-      safeFileNames: true,           // Remove special characters
-      preserveExtension: true        // Keep file extension
-    })
-  );
-}
+    // ===== FILE UPLOAD CONFIG (industry standard) =====
+    this.app.use(
+      fileUpload({
+        limits: {
+          fileSize: 60 * 1024 * 1024, // 20 MB industry standard
+        },
+        abortOnLimit: true,            // Stop upload when limit exceeded
+        createParentPath: true,        // Auto-create upload folders
+        useTempFiles: true,            // Better for large file handling
+        tempFileDir: "/tmp/uploads",   // OS temp folder
+        safeFileNames: true,           // Remove special characters
+        preserveExtension: true        // Keep file extension
+      })
+    );
+  }
 
 
   // ---------------------------------------------
@@ -93,6 +94,7 @@ class App {
           "https://num-tree-frontend.vercel.app",
           "http://localhost:3000",
           "http://localhost:5173",
+          "http://localhost:4200",
         ],
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: [
@@ -138,11 +140,13 @@ class App {
     const authRoutes = new AuthRoutes();
     const productRoutes = new ProductRoutes();
     const categoryRoutes = new CategoryRoutes();
+    const userRoutes = new UserRoutes();
     const uploadRoutes = new BulkUploadRoutes();
 
     this.app.use(`/api/v1/${authRoutes.path}`, authRoutes.router);
     this.app.use(`/api/v1/${productRoutes.path}`, productRoutes.router);
     this.app.use(`/api/v1/${categoryRoutes.path}`, categoryRoutes.router);
+    this.app.use(`/api/v1/${userRoutes.path}`, userRoutes.router);
     this.app.use(`/api/v1/${uploadRoutes.path}`, uploadRoutes.router);
 
   }

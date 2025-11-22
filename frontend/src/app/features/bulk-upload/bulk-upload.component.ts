@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { BulkUploadService } from '../../core/services/bulk-upload.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 
 @Component({
@@ -9,11 +10,13 @@ import { ToastService } from '../../shared/components/toast/toast.service';
   templateUrl: './bulk-upload.component.html'
 })
 export class BulkUploadComponent {
+  bulkUploadService = inject(BulkUploadService);
   toast = inject(ToastService);
 
-  isUploading = false;
-  uploadComplete = false;
-  progress = 0;
+  isUploading = signal(false);
+  uploadComplete = signal(false);
+  uploadResult = signal<{ jobId: string; chunks: number } | null>(null);
+  progress = signal(0);
 
   onFileSelected(event: any) {
     const file = event.target.files[0];
@@ -22,26 +25,42 @@ export class BulkUploadComponent {
         this.toast.show('Please upload a CSV file', 'error');
         return;
       }
-      this.simulateUpload();
+      this.uploadFile(file);
     }
   }
 
-  simulateUpload() {
-    this.isUploading = true;
-    this.progress = 0;
-    const interval = setInterval(() => {
-      this.progress += 10;
-      if (this.progress >= 100) {
-        clearInterval(interval);
-        this.isUploading = false;
-        this.uploadComplete = true;
-        this.toast.show('Bulk upload completed', 'success');
+  uploadFile(file: File) {
+    this.isUploading.set(true);
+    this.uploadComplete.set(false);
+    this.progress.set(0);
+
+    this.bulkUploadService.uploadCSV(file, {
+      linesPerChunk: 20000,
+      persistence: 'db'
+    }).subscribe({
+      next: (response) => {
+        this.isUploading.set(false);
+        this.uploadComplete.set(true);
+        this.uploadResult.set({
+          jobId: response.jobId,
+          chunks: response.chunks
+        });
+        this.progress.set(100);
+        this.toast.show(
+          `Bulk upload started! Job ID: ${response.jobId}, Processing ${response.chunks} chunks`,
+          'success'
+        );
+      },
+      error: (error) => {
+        console.error('Upload error:', error);
+        this.isUploading.set(false);
+        this.toast.show('Failed to upload file', 'error');
       }
-    }, 300);
+    });
   }
 
   reset() {
-    this.uploadComplete = false;
-    this.progress = 0;
+    this.uploadComplete.set(false);
+    this.uploadResult.set(null);
   }
 }

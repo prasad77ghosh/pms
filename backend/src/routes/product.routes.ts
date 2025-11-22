@@ -15,11 +15,42 @@ export default class ProductRoutes {
   }
 
   private routes() {
+    // Create product (protected)
     this.router.post(
       "/add",
       new ProtectedMiddleware().protected,
       ProductValidator.createValidation,
       this.productController.create
+    );
+
+    // List products (public - no auth required)
+    this.router.get(
+      "/",
+      ProductValidator.listValidation,
+      this.productController.list
+    );
+
+    // Get single product (public - no auth required)
+    this.router.get(
+      "/:id",
+      ProductValidator.getOneValidation,
+      this.productController.getOne
+    );
+
+    // Update product (protected)
+    this.router.put(
+      "/:id",
+      new ProtectedMiddleware().protected,
+      ProductValidator.updateValidation,
+      this.productController.update
+    );
+
+    // Delete product (protected)
+    this.router.delete(
+      "/:id",
+      new ProtectedMiddleware().protected,
+      ProductValidator.deleteValidation,
+      this.productController.delete
     );
   }
 }

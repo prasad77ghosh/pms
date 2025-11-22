@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
+import { CategoryService } from '../../../core/services/category.service';
 import { TableComponent, TableColumn } from '../../../shared/components/table/table.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
@@ -13,6 +14,7 @@ import { Category } from '../../../core/models/models';
   templateUrl: './category-list.component.html'
 })
 export class CategoryListComponent {
+  categoryService = inject(CategoryService);
   router = inject(Router);
   toast = inject(ToastService);
 
@@ -20,6 +22,7 @@ export class CategoryListComponent {
   total = signal(0);
   page = signal(1);
   limit = signal(10);
+  isLoading = signal(false);
 
   isDeleteModalOpen = false;
   categoryToDelete: Category | null = null;
@@ -27,7 +30,6 @@ export class CategoryListComponent {
   columns: TableColumn[] = [
     { key: 'id', label: 'ID', sortable: true },
     { key: 'name', label: 'Name', sortable: true },
-    { key: 'description', label: 'Description', sortable: false },
     { key: 'actions', label: 'Actions', type: 'actions', sortable: false }
   ];
 
@@ -36,18 +38,30 @@ export class CategoryListComponent {
   }
 
   loadCategories() {
-    // Mock Data
-    this.categories.set([
-      { id: 1, name: 'Electronics', description: 'Gadgets and devices' },
-      { id: 2, name: 'Clothing', description: 'Apparel and fashion' },
-      { id: 3, name: 'Books', description: 'Fiction and non-fiction' }
-    ]);
-    this.total.set(3);
+    this.isLoading.set(true);
+
+    this.categoryService.listCategories({
+      page: this.page(),
+      limit: this.limit()
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.categories.set(response.data.data);
+          this.total.set(response.data.data.length);
+        }
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading categories:', error);
+        this.toast.show('Failed to load categories', 'error');
+        this.isLoading.set(false);
+      }
+    });
   }
 
   onPageChange(page: number) {
     this.page.set(page);
-    // Reload data
+    this.loadCategories();
   }
 
   onEdit(category: Category) {
@@ -60,7 +74,22 @@ export class CategoryListComponent {
   }
 
   confirmDelete() {
-    this.toast.show('Category deleted', 'success');
-    this.isDeleteModalOpen = false;
+    if (this.categoryToDelete && this.categoryToDelete.id) {
+      this.categoryService.deleteCategory(this.categoryToDelete.id.toString()).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.toast.show('Category deleted successfully', 'success');
+            this.loadCategories();
+          }
+          this.isDeleteModalOpen = false;
+          this.categoryToDelete = null;
+        },
+        error: (error) => {
+          console.error('Error deleting category:', error);
+          this.toast.show('Failed to delete category', 'error');
+          this.isDeleteModalOpen = false;
+        }
+      });
+    }
   }
 }

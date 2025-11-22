@@ -1,4 +1,4 @@
 export const environment = {
     production: false,
-    apiUrl: 'https://api.example.com/v1' // Placeholder API URL
+    apiUrl: 'http://localhost:5500/api/v1'
 };

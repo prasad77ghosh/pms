@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '../../../core/services/api.service';
+import { ProductService } from '../../../core/services/product.service';
 import { TableComponent, TableColumn } from '../../../shared/components/table/table.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
@@ -16,7 +16,7 @@ import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
     templateUrl: './product-list.component.html'
 })
 export class ProductListComponent {
-    api = inject(ApiService);
+    productService = inject(ProductService);
     router = inject(Router);
     toast = inject(ToastService);
 
@@ -24,22 +24,26 @@ export class ProductListComponent {
     total = signal(0);
     page = signal(1);
     limit = signal(10);
+    isLoading = signal(false);
 
     searchTerm = '';
     searchSubject = new Subject<string>();
 
     sortKey = '';
-    sortDir = '';
+    sortDir: 'asc' | 'desc' = 'asc';
 
     isDeleteModalOpen = false;
     productToDelete: Product | null = null;
 
+    // New modal for creating a product
+    isCreateModalOpen = signal(false);
+
+
     columns: TableColumn[] = [
-        { key: 'imageUrl', label: 'Image', type: 'image', sortable: false },
+        { key: 'image_url', label: 'Image', type: 'image', sortable: false },
         { key: 'name', label: 'Name', sortable: true },
-        { key: 'categoryName', label: 'Category', sortable: true },
+        { key: 'category_name', label: 'Category', sortable: true },
         { key: 'price', label: 'Price', type: 'currency', sortable: true },
-        { key: 'stock', label: 'Stock', sortable: true },
         { key: 'actions', label: 'Actions', type: 'actions', sortable: false }
     ];
 
@@ -56,42 +60,61 @@ export class ProductListComponent {
         this.loadProducts();
     }
 
+    // Open/close create modal
+    openCreateModal() {
+        this.isCreateModalOpen.set(true);
+    }
+
+    closeCreateModal() {
+        this.isCreateModalOpen.set(false);
+    }
+
+    // Called when a product is successfully created via modal
+    onProductCreated() {
+        this.closeCreateModal();
+        this.loadProducts();
+    }
+
     loadProducts() {
-        // In a real app, we would call the API
-        // this.api.getList<Product>('products', this.page(), this.limit(), this.sortKey ? `${this.sortKey}:${this.sortDir}` : undefined, this.searchTerm)
-        //   .subscribe(res => {
-        //     this.products.set(res.data);
-        //     this.total.set(res.total);
-        //   });
+        this.isLoading.set(true);
 
-        // MOCK DATA
-        const mockProducts: Product[] = Array.from({ length: 20 }, (_, i) => ({
-            id: i + 1,
-            name: `Product ${i + 1}`,
-            description: `Description for Product ${i + 1}`,
-            price: (i + 1) * 100,
-            categoryId: 1,
-            categoryName: 'Electronics',
-            stock: 50,
-            imageUrl: `https://via.placeholder.com/150?text=Product+${i + 1}`
-        }));
-
-        // Filter and Sort Mock
-        let filtered = mockProducts.filter(p => p.name.toLowerCase().includes(this.searchTerm.toLowerCase()));
-
-        if (this.sortKey) {
-            filtered.sort((a: any, b: any) => {
-                if (a[this.sortKey] < b[this.sortKey]) return this.sortDir === 'asc' ? -1 : 1;
-                if (a[this.sortKey] > b[this.sortKey]) return this.sortDir === 'asc' ? 1 : -1;
-                return 0;
-            });
+        // Map frontend sort format to backend format
+        let sort: 'price_asc' | 'price_desc' | undefined = undefined;
+        if (this.sortKey === 'price') {
+            sort = this.sortDir === 'asc' ? 'price_asc' : 'price_desc';
         }
 
-        const start = (this.page() - 1) * this.limit();
-        const paged = filtered.slice(start, start + this.limit());
-
-        this.products.set(paged);
-        this.total.set(filtered.length);
+        this.productService.listProducts({
+            page: this.page(),
+            limit: this.limit(),
+            search: this.searchTerm || undefined,
+            sort: sort
+        }).subscribe({
+            next: (response) => {
+                if (response.success && response.data) {
+                    // Map backend snake_case to frontend camelCase for display
+                    const products = response.data.products.map(p => ({
+                        ...p,
+                        imageUrl: p.image_url,
+                        categoryName: p.category_name,
+                        categoryId: p.category_id
+                    })) as Product[];
+                    this.products.set(products);
+                    // Use total count from backend if provided, otherwise estimate
+                    if (response.data.total !== undefined) {
+                        this.total.set(response.data.total);
+                    } else {
+                        this.total.set(response.data.products.length);
+                    }
+                }
+                this.isLoading.set(false);
+            },
+            error: (error) => {
+                console.error('Error loading products:', error);
+                this.toast.show('Failed to load products', 'error');
+                this.isLoading.set(false);
+            }
+        });
     }
 
     onSearch(term: string) {
@@ -120,12 +143,22 @@ export class ProductListComponent {
     }
 
     confirmDelete() {
-        if (this.productToDelete) {
-            // this.api.delete(`products/${this.productToDelete.id}`).subscribe(...)
-            this.toast.show('Product deleted successfully', 'success');
-            this.loadProducts(); // Refresh list
-            this.isDeleteModalOpen = false;
-            this.productToDelete = null;
+        if (this.productToDelete && this.productToDelete.id) {
+            this.productService.deleteProduct(this.productToDelete.id.toString()).subscribe({
+                next: (response) => {
+                    if (response.success) {
+                        this.toast.show('Product deleted successfully', 'success');
+                        this.loadProducts(); // Refresh list
+                    }
+                    this.isDeleteModalOpen = false;
+                    this.productToDelete = null;
+                },
+                error: (error) => {
+                    console.error('Error deleting product:', error);
+                    this.toast.show('Failed to delete product', 'error');
+                    this.isDeleteModalOpen = false;
+                }
+            });
         }
     }
 }

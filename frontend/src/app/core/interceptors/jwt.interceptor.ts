@@ -1,18 +1,23 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthService } from '../services/auth.service';
+import { catchError, throwError } from 'rxjs';
+import { Router } from '@angular/router';
 
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
-    const authService = inject(AuthService);
-    const token = authService.getToken();
+    const router = inject(Router);
 
-    if (token) {
-        req = req.clone({
-            setHeaders: {
-                Authorization: `Bearer ${token}`
+    // Clone request with credentials to include httpOnly cookies
+    const clonedReq = req.clone({
+        withCredentials: true
+    });
+
+    return next(clonedReq).pipe(
+        catchError((error: HttpErrorResponse) => {
+            if (error.status === 401) {
+                // Unauthorized - redirect to login
+                router.navigate(['/auth/login']);
             }
-        });
-    }
-
-    return next(req);
+            return throwError(() => error);
+        })
+    );
 };
