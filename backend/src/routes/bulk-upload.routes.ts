@@ -20,5 +20,11 @@ export default class BulkUploadRoutes {
       new ProtectedMiddleware().protected,
       this.bulkUploadController.upload
     );
+
+    this.router.get(
+      "/status/:jobId",
+      new ProtectedMiddleware().protected,
+      this.bulkUploadController.getJobStatus
+    );
   }
 }

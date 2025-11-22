@@ -1,25 +1,32 @@
-// src/workers/chunkWorker.ts
-
 import { parentPort } from "worker_threads";
 import path from "path";
 import { db } from "../db/databse";
 import { BulkUploadService } from "../services/bulk-upload.service";
+import { ReportService } from "../services/report.service";
 
 interface WorkerJob {
+  type?: "bulk_upload" | "generate_report";
   jobId: string;
-  chunkIndex: number;
-  chunkFile: string;
-  createdBy: string | null;
+  // Bulk Upload specific
+  chunkIndex?: number;
+  chunkFile?: string;
+  createdBy?: string | null;
   persistence?: "db" | "redis" | "rmq";
+  // Report specific
+  reportType?: string;
+  filters?: any;
 }
 
 interface WorkerResponse {
   jobId: string;
-  chunkIndex: number;
-  chunkFile: string;
+  // Bulk Upload specific
+  chunkIndex?: number | undefined;
+  chunkFile?: string | undefined;
   status: "completed" | "failed";
-  errors?: Array<{ row: any; reason: string }>;
-  error?: string;
+  errors?: Array<{ row: any; reason: string }> | undefined;
+  error?: string | undefined;
+  // Report specific
+  type?: "bulk_upload" | "generate_report" | undefined;
 }
 
 async function resolveCategoryId(categoryName: string): Promise<string> {
@@ -51,8 +58,27 @@ async function resolveCategoryId(categoryName: string): Promise<string> {
 }
 
 parentPort?.on("message", async (job: WorkerJob) => {
-  const { jobId, chunkIndex, chunkFile, createdBy } = job;
+  const { jobId, type = "bulk_upload" } = job;
+
   try {
+    if (type === "generate_report") {
+      console.log(`Worker Thread: Starting Report Generation jobId=${jobId}`);
+      const reportService = new ReportService();
+      await reportService.generateProductReport(jobId);
+
+      const msg: WorkerResponse = {
+        jobId,
+        status: "completed",
+        type: "generate_report"
+      };
+      parentPort?.postMessage(msg);
+      return;
+    }
+
+    // Default to Bulk Upload
+    const { chunkIndex, chunkFile, createdBy } = job;
+    if (!chunkFile || chunkIndex === undefined) throw new Error("Invalid bulk upload job");
+
     console.log(
       `Worker Thread: Starting jobId=${jobId} chunk=${chunkIndex} file=${path.basename(
         chunkFile
@@ -60,7 +86,7 @@ parentPort?.on("message", async (job: WorkerJob) => {
     );
 
     const service = new BulkUploadService({
-      createdBy,
+      createdBy: createdBy ?? null,
       chunkFile,
     });
 
@@ -72,18 +98,20 @@ parentPort?.on("message", async (job: WorkerJob) => {
       status: "completed",
       chunkFile,
       errors: result.errors,
+      type: "bulk_upload"
     };
 
     parentPort?.postMessage(msg);
   } catch (err: any) {
-    console.error(`Worker error in chunk ${chunkIndex}:`, err.message);
+    console.error(`Worker error for job ${jobId}:`, err.message);
 
     const msg: WorkerResponse = {
       jobId,
-      chunkIndex,
+      chunkIndex: job.chunkIndex,
       status: "failed",
-      chunkFile,
+      chunkFile: job.chunkFile,
       error: err.message,
+      type: job.type
     };
 
     parentPort?.postMessage(msg);

@@ -16,6 +16,7 @@ import CategoryRoutes from "./routes/category.routes";
 import UserRoutes from "./routes/user.routes";
 import fileUpload from "express-fileupload";
 import BulkUploadRoutes from "./routes/bulk-upload.routes";
+import ReportRoutes from "./routes/report.routes";
 import { getRmqConn } from "./rmq";
 import { startRmqConsumer } from "./consumers";
 
@@ -142,12 +143,14 @@ class App {
     const categoryRoutes = new CategoryRoutes();
     const userRoutes = new UserRoutes();
     const uploadRoutes = new BulkUploadRoutes();
+    const reportRoutes = new ReportRoutes();
 
     this.app.use(`/api/v1/${authRoutes.path}`, authRoutes.router);
     this.app.use(`/api/v1/${productRoutes.path}`, productRoutes.router);
     this.app.use(`/api/v1/${categoryRoutes.path}`, categoryRoutes.router);
     this.app.use(`/api/v1/${userRoutes.path}`, userRoutes.router);
     this.app.use(`/api/v1/${uploadRoutes.path}`, uploadRoutes.router);
+    this.app.use(`/api/v1/${reportRoutes.path}`, reportRoutes.router);
 
   }
 

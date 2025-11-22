@@ -6,6 +6,7 @@ import { ProductService } from '../../../core/services/product.service';
 import { TableComponent, TableColumn } from '../../../shared/components/table/table.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { ToastService } from '../../../shared/components/toast/toast.service';
+import { ReportService } from '../../../core/services/report.service';
 import { Product } from '../../../core/models/models';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 
@@ -17,10 +18,11 @@ import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductListComponent implements OnInit {
-    
+
     private productService = inject(ProductService);
     private router = inject(Router);
     private toast = inject(ToastService);
+    private reportService = inject(ReportService);
 
     // Signals
     products = signal<Product[]>([]);
@@ -28,6 +30,7 @@ export class ProductListComponent implements OnInit {
     page = signal(1);
     limit = signal(10);
     isLoading = signal(false);
+    isGeneratingReport = signal(false);
 
     // Search
     searchTerm = '';
@@ -143,5 +146,47 @@ export class ProductListComponent implements OnInit {
                 this.isDeleteModalOpen = false;
             }
         });
+    }
+
+    downloadReport() {
+        if (this.isGeneratingReport()) return;
+
+        this.isGeneratingReport.set(true);
+        this.toast.show('Generating report...', 'info');
+
+        this.reportService.requestReport('products', { search: this.searchTerm }).subscribe({
+            next: (res) => {
+                this.pollReportStatus(res.jobId);
+            },
+            error: (err) => {
+                console.error('Report request failed', err);
+                this.isGeneratingReport.set(false);
+                this.toast.show('Failed to start report generation', 'error');
+            }
+        });
+    }
+
+    pollReportStatus(jobId: string) {
+        const poll = setInterval(() => {
+            this.reportService.getReportStatus(jobId).subscribe({
+                next: (status) => {
+                    if (status.status === 'completed') {
+                        clearInterval(poll);
+                        this.isGeneratingReport.set(false);
+                        this.toast.show('Report ready! Downloading...', 'success');
+                        this.reportService.downloadReport(jobId);
+                    } else if (status.status === 'failed') {
+                        clearInterval(poll);
+                        this.isGeneratingReport.set(false);
+                        this.toast.show('Report generation failed', 'error');
+                    }
+                },
+                error: () => {
+                    clearInterval(poll);
+                    this.isGeneratingReport.set(false);
+                    this.toast.show('Error checking report status', 'error');
+                }
+            });
+        }, 2000);
     }
 }

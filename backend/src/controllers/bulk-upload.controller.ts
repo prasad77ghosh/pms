@@ -51,7 +51,31 @@ export class BulkUploadController {
       const savedPath = path.join(uploadsDir, `${jobId}_${file.name}`);
       await file.mv(savedPath);
 
-      const linesPerChunk = parseInt(req.body.linesPerChunk || "20000", 10);
+      // Count total lines in CSV (excluding header)
+      const totalLines = await this.countCSVLines(savedPath);
+      console.log(`📊 CSV contains ${totalLines} data rows`);
+
+      // Dynamic chunk size calculation
+      let linesPerChunk: number;
+      if (req.body.linesPerChunk) {
+        // User specified chunk size
+        linesPerChunk = parseInt(req.body.linesPerChunk, 10);
+      } else {
+        // Auto-calculate based on file size
+        if (totalLines <= 5000) {
+          // Small file: process as single chunk
+          linesPerChunk = totalLines;
+          console.log(`✅ Small file detected, processing as single chunk`);
+        } else if (totalLines <= 50000) {
+          // Medium file: 10k per chunk
+          linesPerChunk = 10000;
+        } else {
+          // Large file: 20k per chunk
+          linesPerChunk = 20000;
+        }
+      }
+
+      console.log(`🔢 Using chunk size: ${linesPerChunk} lines`);
       const chunks = await splitCSV(savedPath, linesPerChunk);
 
       const persistence = req.body.persistence || persistance;
@@ -100,5 +124,42 @@ export class BulkUploadController {
       console.log("ERROR--CONTROLLER-->", error);
       next(error);
     }
+  }
+
+  async getJobStatus(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { jobId } = req.params;
+      if (!jobId) return res.status(400).json({ message: "jobId required" });
+
+      const status = await ChunkManager.getJobStatus(jobId);
+      if (!status) return res.status(404).json({ message: "job not found" });
+
+      return res.json(status);
+    } catch (error) {
+      console.log("ERROR--STATUS-->", error);
+      next(error);
+    }
+  }
+
+  private async countCSVLines(filePath: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      let lineCount = 0;
+      const stream = fs.createReadStream(filePath);
+      const rl = require('readline').createInterface({
+        input: stream,
+        crlfDelay: Infinity
+      });
+
+      rl.on('line', () => {
+        lineCount++;
+      });
+
+      rl.on('close', () => {
+        // Subtract 1 for header row
+        resolve(Math.max(0, lineCount - 1));
+      });
+
+      rl.on('error', reject);
+    });
   }
 }

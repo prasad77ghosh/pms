@@ -1,9 +1,17 @@
 <div class="space-y-6">
   <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
     <h2 class="text-2xl font-bold text-gray-800">Products</h2>
-    <a routerLink="/products/create" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition shadow-sm">
-      Add Product
-    </a>
+    <div class="flex gap-2">
+      <button (click)="downloadReport()" 
+              [disabled]="isGeneratingReport()"
+              class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+        <span *ngIf="isGeneratingReport()" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+        {{ isGeneratingReport() ? 'Generating...' : 'Download Report' }}
+      </button>
+      <a routerLink="/products/create" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition shadow-sm">
+        Add Product
+      </a>
+    </div>
   </div>
 
   <!-- Filters -->

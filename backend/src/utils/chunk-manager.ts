@@ -31,7 +31,7 @@ export interface JobStatus {
 // -----------------------------
 
 export const ChunkManager = {
-  
+
   async createJob({ fileName, totalChunks, createdBy }: CreateJobParams): Promise<string> {
     const jobId = uuidv4();
 
@@ -46,7 +46,7 @@ export const ChunkManager = {
     return jobId;
   },
 
-  
+
   async createChunkRecords(jobId: string, chunkFiles: string[]): Promise<void> {
     if (!chunkFiles.length) return;
 
@@ -66,7 +66,7 @@ export const ChunkManager = {
     );
   },
 
-  
+
   async markProcessing(jobId: string, chunkIndex: number): Promise<void> {
     await db.query(
       `
@@ -78,7 +78,7 @@ export const ChunkManager = {
     );
   },
 
-  
+
   async markCompleted(jobId: string, chunkIndex: number, errors: any[] = []): Promise<void> {
     await db.query(
       `
@@ -90,7 +90,7 @@ export const ChunkManager = {
     );
   },
 
-  
+
   async markFailed(jobId: string, chunkIndex: number, errors: any[] = []): Promise<void> {
     await db.query(
       `
@@ -102,7 +102,7 @@ export const ChunkManager = {
     );
   },
 
-  
+
   async getJobStatus(jobId: string): Promise<JobStatus | null> {
     const res = await db.query(
       `
@@ -120,7 +120,7 @@ export const ChunkManager = {
 
     return res.rows[0] as JobStatus;
   },
-  
+
   async listPendingChunks(jobId: string): Promise<ChunkRecord[]> {
     const r = await db.query(
       `

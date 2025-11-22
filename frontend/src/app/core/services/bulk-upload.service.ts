@@ -40,4 +40,8 @@ export class BulkUploadService {
             })
         );
     }
+
+    getJobStatus(jobId: string): Observable<any> {
+        return this.http.get(`${this.apiUrl}/status/${jobId}`);
+    }
 }

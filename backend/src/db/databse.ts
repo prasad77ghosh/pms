@@ -47,6 +47,10 @@ class PostgresDB {
     return this.pool.query(text, params);
   }
 
+  public getPool() {
+    return this.pool;
+  }
+
   private async testConnection() {
     try {
       await this.pool.query("SELECT NOW()");
