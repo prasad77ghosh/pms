@@ -12,6 +12,7 @@ export class ModalComponent {
   @Input() title = 'Confirmation';
   @Input() confirmText = 'Confirm';
   @Input() cancelText = 'Cancel';
+  @Input() showFooter = true;
 
   @Output() closeEvent = new EventEmitter<void>();
   @Output() confirmEvent = new EventEmitter<void>();

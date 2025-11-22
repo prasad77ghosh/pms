@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { fieldValidateError } from "../helper";
-import { ProductService } from "../services/product.service";
+import { ProductService, ProductSortOption } from "../services/product.service";
 import { AuthRequest } from "../types/auth";
 
 export class ProductController {
@@ -53,21 +53,30 @@ export class ProductController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
       const { page, limit, search, category, sort } = req.query;
+
+      // Validate fields
       fieldValidateError(req);
+
+      // Convert and sanitize values
+      const sortValue: ProductSortOption | undefined =
+        sort && typeof sort === "string"
+          ? (sort as ProductSortOption)
+          : undefined;
 
       const result = await ProductService.listProducts({
         page: Number(page) || 1,
         limit: Number(limit) || 10,
         search: (search as string) || "",
         category: (category as string) || "",
-        sort: (sort as "price_asc" | "price_desc") || "price_asc",
+        sort: sortValue,
       });
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         msg: "Products fetched successfully",
         data: result,
       });
+
     } catch (error) {
       next(error);
     }

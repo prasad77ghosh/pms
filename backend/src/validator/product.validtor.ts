@@ -58,7 +58,18 @@ export const ProductValidator = {
     query("category").optional().isUUID(),
     query("sort")
       .optional()
-      .isIn(["price_asc", "price_desc"])
-      .withMessage("sort must be price_asc or price_desc"),
+      .isIn([
+        "name_asc",
+        "name_desc",
+        "price_asc",
+        "price_desc",
+        "created_at_asc",
+        "created_at_desc",
+        "category_asc",
+        "category_desc",
+      ])
+      .withMessage(
+        "sort must be one of: name_asc, name_desc, price_asc, price_desc, created_at_asc, created_at_desc, category_asc, category_desc"
+      ),
   ],
 };

@@ -23,7 +23,15 @@ export interface ProductListParams {
     limit?: number;
     search?: string;
     category?: string;
-    sort?: 'price_asc' | 'price_desc';
+    sort?:
+    | 'name_asc'
+    | 'name_desc'
+    | 'price_asc'
+    | 'price_desc'
+    | 'created_at_asc'
+    | 'created_at_desc'
+    | 'category_asc'
+    | 'category_desc';
 }
 
 @Injectable({

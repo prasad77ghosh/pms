@@ -20,7 +20,7 @@ export const routes: Routes = [
         component: MainLayoutComponent,
         // Removed authGuard from the root of MainLayout to allow public access to Products List
         children: [
-            { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
+            { path: '', redirectTo: 'products', pathMatch: 'full' },
             {
                 path: 'products',
                 children: [
@@ -56,11 +56,7 @@ export const routes: Routes = [
                     { path: 'edit/:id', loadComponent: () => import('./features/users/create/user-form.component').then(m => m.UserFormComponent) }
                 ]
             },
-            {
-                path: 'bulk-upload',
-                loadComponent: () => import('./features/bulk-upload/bulk-upload.component').then(m => m.BulkUploadComponent),
-                canActivate: [authGuard]
-            },
+
             {
                 path: 'reports',
                 loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent),

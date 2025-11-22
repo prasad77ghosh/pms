@@ -13,7 +13,7 @@ export interface TableColumn {
   selector: 'app-table',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './table.component.html'
+  templateUrl: './table.component.html',
 })
 export class TableComponent {
   @Input() data: any[] = [];
@@ -22,7 +22,7 @@ export class TableComponent {
   @Input() page: number = 1;
   @Input() limit: number = 10;
 
-  @Output() sort = new EventEmitter<{ key: string, direction: 'asc' | 'desc' }>();
+  @Output() sort = new EventEmitter<{ key: string; direction: 'asc' | 'desc' }>();
   @Output() pageChange = new EventEmitter<number>();
   @Output() edit = new EventEmitter<any>();
   @Output() delete = new EventEmitter<any>();
@@ -30,9 +30,14 @@ export class TableComponent {
   sortKey: string = '';
   sortDirection: 'asc' | 'desc' = 'asc';
 
+
+
   onSort(col: TableColumn) {
     if (!col.sortable) return;
 
+
+
+    // Normal sorting when user actually clicks
     if (this.sortKey === col.key) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {

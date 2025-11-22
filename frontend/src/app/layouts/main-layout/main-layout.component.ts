@@ -13,6 +13,6 @@ export class MainLayoutComponent {
   authService = inject(AuthService);
 
   logout() {
-    this.authService.logout();
+    this.authService.logout().subscribe();
   }
 }

@@ -1,5 +1,6 @@
 import { NextFunction, Response } from "express";
 import { AuthRequest } from "../types/auth";
+
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import fs from "fs-extra";
@@ -51,31 +52,19 @@ export class BulkUploadController {
       const savedPath = path.join(uploadsDir, `${jobId}_${file.name}`);
       await file.mv(savedPath);
 
-      // Count total lines in CSV (excluding header)
-      const totalLines = await this.countCSVLines(savedPath);
-      console.log(`📊 CSV contains ${totalLines} data rows`);
+      let linesPerChunk = parseInt(req.body.linesPerChunk || "10000", 10);
 
-      // Dynamic chunk size calculation
-      let linesPerChunk: number;
-      if (req.body.linesPerChunk) {
-        // User specified chunk size
-        linesPerChunk = parseInt(req.body.linesPerChunk, 10);
-      } else {
-        // Auto-calculate based on file size
-        if (totalLines <= 5000) {
-          // Small file: process as single chunk
-          linesPerChunk = totalLines;
-          console.log(`✅ Small file detected, processing as single chunk`);
-        } else if (totalLines <= 50000) {
-          // Medium file: 10k per chunk
-          linesPerChunk = 10000;
-        } else {
-          // Large file: 20k per chunk
-          linesPerChunk = 20000;
-        }
+      // Count lines, but stop if we exceed linesPerChunk (since we only care if it's smaller)
+      // Actually, we need to know if total < linesPerChunk.
+      // So if we count up to linesPerChunk + 1, we know it's larger.
+      const totalLines = await countLines(savedPath, linesPerChunk + 1);
+      const totalRecords = Math.max(1, totalLines - 1); // Ensure at least 1
+
+      // Cap linesPerChunk at totalRecords if totalRecords is smaller
+      if (linesPerChunk > totalRecords) {
+        linesPerChunk = totalRecords;
       }
 
-      console.log(`🔢 Using chunk size: ${linesPerChunk} lines`);
       const chunks = await splitCSV(savedPath, linesPerChunk);
 
       const persistence = req.body.persistence || persistance;
@@ -140,26 +129,29 @@ export class BulkUploadController {
       next(error);
     }
   }
+}
 
-  private async countCSVLines(filePath: string): Promise<number> {
-    return new Promise((resolve, reject) => {
-      let lineCount = 0;
-      const stream = fs.createReadStream(filePath);
-      const rl = require('readline').createInterface({
-        input: stream,
-        crlfDelay: Infinity
-      });
+async function countLines(filePath: string, limit?: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let lines = 0;
+    const stream = fs.createReadStream(filePath);
 
-      rl.on('line', () => {
-        lineCount++;
-      });
-
-      rl.on('close', () => {
-        // Subtract 1 for header row
-        resolve(Math.max(0, lineCount - 1));
-      });
-
-      rl.on('error', reject);
+    stream.on("data", (chunk: any) => {
+      for (let i = 0; i < chunk.length; ++i) {
+        if (chunk[i] === 10) lines++; // 10 is '\n'
+      }
+      if (limit && lines > limit) {
+        stream.destroy();
+        resolve(lines);
+      }
     });
-  }
+
+    stream.on("end", () => {
+      resolve(lines);
+    });
+
+    stream.on("error", (err) => {
+      reject(err);
+    });
+  });
 }

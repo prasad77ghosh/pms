@@ -16,6 +16,16 @@ interface UpdateProductData {
   category_id?: string;
 }
 
+export type ProductSortOption =
+  | "name_asc"
+  | "name_desc"
+  | "price_asc"
+  | "price_desc"
+  | "created_at_asc"
+  | "created_at_desc"
+  | "category_asc"
+  | "category_desc";
+
 export class ProductService {
   static async createProduct(data: CreateProductData) {
     const { name, price, image_url, category_id, created_by } = data;
@@ -69,73 +79,118 @@ export class ProductService {
     limit = 10,
     search = "",
     category = "",
-    sort = "price_asc",
+    sort,
   }: {
     page?: number;
     limit?: number;
     search?: string;
     category?: string;
-    sort?: "price_asc" | "price_desc";
+    sort?: ProductSortOption | undefined;
   }) {
+
+    console.log("SORT--->", sort)
+
     const offset = (page - 1) * limit;
 
-    // Base query with filters
-    let baseQuery = `
-      SELECT p.id, p.name, p.price, p.image_url, p.created_at,
-             c.name AS category_name
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE 1 = 1
-    `;
     const params: any[] = [];
-    let paramIndex = 1;
+    let i = 1;
+
+    const sqlParts: string[] = [];
+
+    sqlParts.push(`
+    SELECT 
+      p.id,
+      p.name,
+      p.price,
+      p.image_url,
+      p.created_at,
+      c.name AS category_name
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE 1 = 1
+  `);
 
     if (search) {
-      baseQuery += `
-        AND (
-          to_tsvector('simple', p.name) @@ plainto_tsquery('simple', $${paramIndex})
-          OR c.name ILIKE $${paramIndex + 1}
-        )
-      `;
+      sqlParts.push(`
+      AND (
+        to_tsvector('simple', p.name) @@ plainto_tsquery('simple', $${i})
+        OR c.name ILIKE $${i + 1}
+      )
+    `);
       params.push(search);
       params.push(`%${search}%`);
-      paramIndex += 2;
+      i += 2;
     }
 
     if (category) {
-      baseQuery += ` AND c.id = $${paramIndex}`;
+      sqlParts.push(`AND c.id = $${i}`);
       params.push(category);
-      paramIndex++;
+      i++;
     }
 
-    // Sorting
-    let orderBy = "ORDER BY p.price ASC";
-    if (sort === "price_desc") orderBy = "ORDER BY p.price DESC";
+    // ⭐ Comprehensive sorting with default to created_at DESC
+    let orderBy = "ORDER BY p.created_at DESC";
 
-    // Final paginated query
-    const finalQuery = `
-      ${baseQuery}
-      ${orderBy}
-      LIMIT ${limit}
-      OFFSET ${offset}
-    `;
+    if (sort === "name_asc") {
+      orderBy = "ORDER BY p.name ASC, p.created_at DESC";
+    } else if (sort === "name_desc") {
+      orderBy = "ORDER BY p.name DESC, p.created_at DESC";
+    } else if (sort === "price_asc") {
+      orderBy = "ORDER BY p.price ASC, p.created_at DESC";
+    } else if (sort === "price_desc") {
+      orderBy = "ORDER BY p.price DESC, p.created_at DESC";
+    } else if (sort === "created_at_asc") {
+      orderBy = "ORDER BY p.created_at ASC";
+    } else if (sort === "created_at_desc") {
+      orderBy = "ORDER BY p.created_at DESC";
+    } else if (sort === "category_asc") {
+      orderBy = "ORDER BY c.name ASC, p.created_at DESC";
+    } else if (sort === "category_desc") {
+      orderBy = "ORDER BY c.name DESC, p.created_at DESC";
+    }
+
+    sqlParts.push(orderBy);
+    sqlParts.push(`LIMIT ${limit}`);
+    sqlParts.push(`OFFSET ${offset}`);
+
+    const finalQuery = sqlParts.join(" ");
+
+    console.log("📌 FINAL SQL:", finalQuery);
+    console.log("📌 PARAMS:", params);
+
     const result = await db.query(finalQuery, params);
 
-    // Count query for total items (same filters, no limit/offset)
-    const countQuery = `
-      SELECT COUNT(*) AS total
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE 1 = 1${search ? ` AND (to_tsvector('simple', p.name) @@ plainto_tsquery('simple', $1) OR c.name ILIKE $2)` : ''}${category ? ` AND c.id = $${search ? 3 : 1}` : ''}
-    `;
+    // Count Query
+    const countParts: string[] = [];
     const countParams: any[] = [];
+    let ci = 1;
+
+    countParts.push(`
+    SELECT COUNT(*) AS total
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE 1=1
+  `);
+
     if (search) {
+      countParts.push(`
+      AND (
+        to_tsvector('simple', p.name) @@ plainto_tsquery('simple', $${ci})
+        OR c.name ILIKE $${ci + 1}
+      )
+    `);
       countParams.push(search);
       countParams.push(`%${search}%`);
+      ci += 2;
     }
+
     if (category) {
+      countParts.push(`AND c.id = $${ci}`);
       countParams.push(category);
+      ci++;
     }
+
+    const countQuery = countParts.join(" ");
     const countResult = await db.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].total, 10);
 
@@ -151,9 +206,10 @@ export class ProductService {
     const { name, price, image_url, category_id } = updates;
 
     // Check if product exists
-    const productCheck = await db.query(`SELECT id FROM products WHERE id = $1`, [
-      id,
-    ]);
+    const productCheck = await db.query(
+      `SELECT id FROM products WHERE id = $1`,
+      [id]
+    );
 
     if (productCheck.rows.length === 0) {
       throw new NotFound("Product not found");

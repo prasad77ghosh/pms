@@ -64,63 +64,82 @@ export class ReportService {
             const filePath = path.join(this.reportsDir, `products_${jobId}.csv`);
             const writableStream = fs.createWriteStream(filePath);
 
-            // Only include columns that exist in the products table
+            // CSV columns with category name instead of ID
             const columns = [
                 "id",
                 "name",
                 "image_url",
                 "price",
-                "category_id",
+                "category_name",
                 "created_at",
             ];
 
             const stringifier = stringify({ header: true, columns: columns });
 
-            // Use streaming query to avoid loading all data into memory
-            // This is critical for large datasets to prevent timeouts
+            // Use batch processing to avoid loading all data into memory
             const client = await db.getPool().connect();
 
             try {
-                // Only select non-deleted products
-                const query = `SELECT id, name, image_url, price, category_id, created_at FROM products WHERE deleted_at IS NULL`;
-                const stream = client.query(new (require('pg').Query)(query));
+                const batchSize = 10000;
+                let offset = 0;
+                let hasMore = true;
 
-                // Pipe: DB Stream -> CSV Stringifier -> File Stream
+                // Pipe stringifier to file
                 stringifier.pipe(writableStream);
 
-                let rowCount = 0;
-                stream.on('data', (row: any) => {
-                    stringifier.write(row);
-                    rowCount++;
+                let totalRows = 0;
 
-                    // Log progress every 1000 rows
-                    if (rowCount % 1000 === 0) {
-                        console.log(`Report ${jobId}: Processed ${rowCount} rows`);
+                while (hasMore) {
+                    // JOIN with categories to get category name
+                    // Format created_at as DD/MM/YYYY HH24:MI:SS to prevent Excel scientific notation
+                    const query = `
+                        SELECT 
+                            p.id, 
+                            p.name, 
+                            p.image_url, 
+                            p.price, 
+                            c.name as category_name,
+                            TO_CHAR(p.created_at, 'DD/MM/YYYY HH24:MI:SS') as created_at
+                        FROM products p
+                        LEFT JOIN categories c ON p.category_id = c.id
+                        WHERE p.deleted_at IS NULL 
+                        ORDER BY p.created_at 
+                        LIMIT $1 OFFSET $2
+                    `;
+
+                    const result = await client.query(query, [batchSize, offset]);
+
+                    if (result.rows.length === 0) {
+                        hasMore = false;
+                        break;
                     }
+
+                    // Write batch to CSV
+                    for (const row of result.rows) {
+                        stringifier.write(row);
+                        totalRows++;
+                    }
+
+                    console.log(`Report ${jobId}: Processed ${totalRows} rows`);
+
+                    offset += batchSize;
+                    hasMore = result.rows.length === batchSize;
+                }
+
+                // Close the stringifier
+                stringifier.end();
+
+                // Wait for file write to complete
+                await new Promise<void>((resolve, reject) => {
+                    writableStream.on('finish', () => {
+                        console.log(`Report ${jobId}: File written successfully with ${totalRows} rows`);
+                        resolve();
+                    });
+                    writableStream.on('error', reject);
                 });
 
-                stream.on('end', () => {
-                    console.log(`Report ${jobId}: Finished streaming ${rowCount} rows`);
-                    stringifier.end();
-                });
-
-                stream.on('error', async (err: any) => {
-                    console.error("Database stream error:", err);
-                    client.release();
-                    await this.updateStatus(jobId, "failed", undefined, err.message);
-                });
-
-                writableStream.on("finish", async () => {
-                    console.log(`Report ${jobId}: File written successfully`);
-                    client.release();
-                    await this.updateStatus(jobId, "completed", filePath);
-                });
-
-                writableStream.on("error", async (err: any) => {
-                    console.error("File write error:", err);
-                    client.release();
-                    await this.updateStatus(jobId, "failed", undefined, err.message);
-                });
+                client.release();
+                await this.updateStatus(jobId, "completed", filePath);
 
             } catch (err: any) {
                 client.release();
