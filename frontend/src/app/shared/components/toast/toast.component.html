@@ -1,0 +1,14 @@
+<div class="fixed top-4 right-4 z-50 flex flex-col gap-2">
+  <div *ngFor="let toast of toastService.toasts()" 
+       class="px-4 py-2 rounded shadow-lg text-white transition-all transform translate-x-0"
+       [ngClass]="{
+         'bg-green-500': toast.type === 'success',
+         'bg-red-500': toast.type === 'error',
+         'bg-blue-500': toast.type === 'info'
+       }">
+    <div class="flex items-center justify-between gap-4">
+      <span>{{ toast.message }}</span>
+      <button (click)="toastService.remove(toast.id)" class="text-white hover:text-gray-200">&times;</button>
+    </div>
+  </div>
+</div>

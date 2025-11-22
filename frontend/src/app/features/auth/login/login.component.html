@@ -1,0 +1,81 @@
+<div>
+  <div class="text-center mb-8">
+    <h2 class="text-2xl font-bold text-white">
+      Welcome Back
+    </h2>
+    <p class="mt-2 text-sm text-slate-300">
+      Sign in to access your dashboard
+    </p>
+  </div>
+
+  <form class="space-y-6" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <div class="space-y-4">
+      <div>
+        <label for="email-address" class="block text-sm font-medium text-slate-300 mb-1">Email address</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+            </svg>
+          </div>
+          <input id="email-address" formControlName="email" type="email" autocomplete="email" required 
+                 class="appearance-none block w-full pl-10 pr-3 py-2.5 border border-slate-600 rounded-lg bg-slate-800/50 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm transition-all" 
+                 placeholder="name@company.com">
+        </div>
+      </div>
+      
+      <div>
+        <label for="password" class="block text-sm font-medium text-slate-300 mb-1">Password</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <input id="password" formControlName="password" type="password" autocomplete="current-password" required 
+                 class="appearance-none block w-full pl-10 pr-3 py-2.5 border border-slate-600 rounded-lg bg-slate-800/50 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm transition-all" 
+                 placeholder="••••••••">
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div class="flex items-center">
+        <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-blue-500 focus:ring-blue-500 border-slate-600 rounded bg-slate-800/50">
+        <label for="remember-me" class="ml-2 block text-sm text-slate-300">
+          Remember me
+        </label>
+      </div>
+
+      <div class="text-sm">
+        <a href="#" class="font-medium text-blue-400 hover:text-blue-300 transition-colors">
+          Forgot password?
+        </a>
+      </div>
+    </div>
+
+    <div *ngIf="loginForm.invalid && loginForm.touched" class="text-red-400 text-sm text-center bg-red-900/20 py-2 rounded-lg border border-red-900/50">
+      Please enter valid credentials.
+    </div>
+
+    <div>
+      <button type="submit" [disabled]="loginForm.invalid || isLoading"
+              class="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+          <svg class="h-5 w-5 text-blue-200 group-hover:text-white transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd" />
+          </svg>
+        </span>
+        {{ isLoading ? 'Signing in...' : 'Sign in' }}
+      </button>
+    </div>
+    
+    <div class="mt-6 text-center">
+      <p class="text-sm text-slate-400">
+        Don't have an account? 
+        <a href="#" class="font-medium text-blue-400 hover:text-blue-300 transition-colors">Sign up</a>
+      </p>
+    </div>
+  </form>
+</div>

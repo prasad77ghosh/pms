@@ -1,0 +1,55 @@
+<div class="space-y-6">
+  <h2 class="text-2xl font-bold text-gray-800">Reports</h2>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    
+    <!-- Sales Report -->
+    <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between h-48">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">Sales Report</h3>
+        <p class="text-sm text-gray-500 mt-2">Download detailed sales analysis for the current month.</p>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button (click)="download('sales', 'csv')" class="flex-1 bg-green-50 text-green-700 hover:bg-green-100 py-2 px-4 rounded-md text-sm font-medium transition">
+          CSV
+        </button>
+        <button (click)="download('sales', 'xlsx')" class="flex-1 bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 px-4 rounded-md text-sm font-medium transition">
+          Excel
+        </button>
+      </div>
+    </div>
+
+    <!-- Inventory Report -->
+    <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between h-48">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">Inventory Report</h3>
+        <p class="text-sm text-gray-500 mt-2">Current stock levels and low stock alerts.</p>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button (click)="download('inventory', 'csv')" class="flex-1 bg-green-50 text-green-700 hover:bg-green-100 py-2 px-4 rounded-md text-sm font-medium transition">
+          CSV
+        </button>
+        <button (click)="download('inventory', 'xlsx')" class="flex-1 bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 px-4 rounded-md text-sm font-medium transition">
+          Excel
+        </button>
+      </div>
+    </div>
+
+    <!-- User Activity -->
+    <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between h-48">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">User Activity</h3>
+        <p class="text-sm text-gray-500 mt-2">Log of user actions and system events.</p>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button (click)="download('activity', 'csv')" class="flex-1 bg-green-50 text-green-700 hover:bg-green-100 py-2 px-4 rounded-md text-sm font-medium transition">
+          CSV
+        </button>
+        <button (click)="download('activity', 'xlsx')" class="flex-1 bg-blue-50 text-blue-700 hover:bg-blue-100 py-2 px-4 rounded-md text-sm font-medium transition">
+          Excel
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
