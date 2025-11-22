@@ -26,6 +26,7 @@ export default class ProductRoutes {
     // List products (public - no auth required)
     this.router.get(
       "/",
+      new ProtectedMiddleware().protected,
       ProductValidator.listValidation,
       this.productController.list
     );
@@ -33,6 +34,7 @@ export default class ProductRoutes {
     // Get single product (public - no auth required)
     this.router.get(
       "/:id",
+      new ProtectedMiddleware().protected,
       ProductValidator.getOneValidation,
       this.productController.getOne
     );

@@ -50,8 +50,6 @@ async function resolveCategoryId(categoryName: string): Promise<string> {
 
     return insert.rows[0].id;
   } catch (err: any) {
-    console.log("ERROR--WORKER-->", err);
-
     console.error("Category resolve error:", err.message);
     throw new Error("category_resolve_failed");
   }
@@ -62,7 +60,6 @@ parentPort?.on("message", async (job: WorkerJob) => {
 
   try {
     if (type === "generate_report") {
-      console.log(`Worker Thread: Starting Report Generation jobId=${jobId}`);
       const reportService = new ReportService();
       await reportService.generateProductReport(jobId);
 
@@ -78,12 +75,6 @@ parentPort?.on("message", async (job: WorkerJob) => {
     // Default to Bulk Upload
     const { chunkIndex, chunkFile, createdBy } = job;
     if (!chunkFile || chunkIndex === undefined) throw new Error("Invalid bulk upload job");
-
-    console.log(
-      `Worker Thread: Starting jobId=${jobId} chunk=${chunkIndex} file=${path.basename(
-        chunkFile
-      )}`
-    );
 
     const service = new BulkUploadService({
       createdBy: createdBy ?? null,

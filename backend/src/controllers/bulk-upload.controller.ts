@@ -16,18 +16,15 @@ workerPool.onWorkerResult = async (msg) => {
 
     if (status === "completed") {
       await ChunkManager.markCompleted(jobId, chunkIndex, errors || []);
-      console.log(`Chunk ${chunkIndex} completed`);
     } else {
       await ChunkManager.markFailed(jobId, chunkIndex, [
         { reason: error || "unknown error" },
       ]);
-      console.log(`Chunk ${chunkIndex} failed`);
     }
 
     if (chunkFile) {
       try {
         await fs.remove(chunkFile);
-        console.log("🧹 Deleted chunk file:", chunkFile);
       } catch (err) {
         console.error("Failed to delete chunk file:", chunkFile, err);
       }
@@ -110,7 +107,6 @@ export class BulkUploadController {
 
       return res.status(400).json({ message: "invalid persistence option" });
     } catch (error) {
-      console.log("ERROR--CONTROLLER-->", error);
       next(error);
     }
   }
@@ -125,7 +121,6 @@ export class BulkUploadController {
 
       return res.json(status);
     } catch (error) {
-      console.log("ERROR--STATUS-->", error);
       next(error);
     }
   }

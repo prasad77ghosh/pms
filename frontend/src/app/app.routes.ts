@@ -18,7 +18,7 @@ export const routes: Routes = [
     {
         path: '',
         component: MainLayoutComponent,
-        // Removed authGuard from the root of MainLayout to allow public access to Products List
+        canActivate: [authGuard],
         children: [
             { path: '', redirectTo: 'products', pathMatch: 'full' },
             {

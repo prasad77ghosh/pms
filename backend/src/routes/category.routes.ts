@@ -26,6 +26,7 @@ export default class CategoryRoutes {
     // List categories (public - no auth required)
     this.router.get(
       "/",
+      new ProtectedMiddleware().protected,
       CategoryValidator.listValidation,
       this.categoryController.list
     );
@@ -33,6 +34,7 @@ export default class CategoryRoutes {
     // Get single category (public - no auth required)
     this.router.get(
       "/:id",
+      new ProtectedMiddleware().protected,
       CategoryValidator.getOneValidation,
       this.categoryController.getOne
     );

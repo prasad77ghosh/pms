@@ -114,13 +114,10 @@ export class ReportService {
                         break;
                     }
 
-                    // Write batch to CSV
                     for (const row of result.rows) {
                         stringifier.write(row);
                         totalRows++;
                     }
-
-                    console.log(`Report ${jobId}: Processed ${totalRows} rows`);
 
                     offset += batchSize;
                     hasMore = result.rows.length === batchSize;
@@ -132,7 +129,6 @@ export class ReportService {
                 // Wait for file write to complete
                 await new Promise<void>((resolve, reject) => {
                     writableStream.on('finish', () => {
-                        console.log(`Report ${jobId}: File written successfully with ${totalRows} rows`);
                         resolve();
                     });
                     writableStream.on('error', reject);

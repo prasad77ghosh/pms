@@ -77,7 +77,6 @@ export class ReportController {
                 // Delete file after successful download
                 try {
                     await fs.remove(filePath);
-                    console.log(`🗑️ Deleted report file: ${filePath}`);
 
                     // Optional: Update database to mark as downloaded/deleted
                     await this.reportService.markAsDownloaded(jobId);

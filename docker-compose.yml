@@ -39,6 +39,31 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "5500:5500"
+    env_file:
+      - ./backend/.env.docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - synapse-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - synapse-network
+
 networks:
   synapse-network:
     driver: bridge

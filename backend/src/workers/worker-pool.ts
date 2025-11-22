@@ -21,7 +21,6 @@ export class WorkerPool {
     const cpu = os.cpus().length;
     const total = Math.max(1, Math.floor(cpu * 0.6));
 
-    console.log(`Spawning ${total} workers`);
     for (let i = 0; i < total; i++) {
       this.spawn();
     }

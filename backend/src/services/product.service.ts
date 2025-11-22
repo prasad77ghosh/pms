@@ -87,9 +87,6 @@ export class ProductService {
     category?: string;
     sort?: ProductSortOption | undefined;
   }) {
-
-    console.log("SORT--->", sort)
-
     const offset = (page - 1) * limit;
 
     const params: any[] = [];
@@ -154,9 +151,6 @@ export class ProductService {
     sqlParts.push(`OFFSET ${offset}`);
 
     const finalQuery = sqlParts.join(" ");
-
-    console.log("📌 FINAL SQL:", finalQuery);
-    console.log("📌 PARAMS:", params);
 
     const result = await db.query(finalQuery, params);
 
